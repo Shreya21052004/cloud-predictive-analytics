@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cloud Analytics Platform</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#f1f5f9;color:#1e293b;font-size:14px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font:inherit}
+
+/* ── Layout ───────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* Top bar */
+#topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 20px;
+  display:flex;align-items:center;gap:14px;height:56px;flex-shrink:0;
+  box-shadow:0 1px 3px rgba(0,0,0,.06)}
+#logo{font-size:15px;font-weight:700;color:#1d4ed8;white-space:nowrap;display:flex;align-items:center;gap:8px}
+#logo span{font-size:18px}
+#search-wrap{flex:1;max-width:540px;position:relative}
+#search-input{width:100%;padding:8px 14px 8px 36px;border:1px solid #cbd5e1;
+  border-radius:8px;font-size:13px;background:#f8fafc;outline:none;transition:border .2s}
+#search-input:focus{border-color:#3b82f6;background:#fff}
+#search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none}
+#search-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;
+  border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
+  z-index:200;display:none;max-height:400px;overflow-y:auto}
+#search-dropdown.open{display:block}
+.sd-section{padding:6px 0}
+.sd-header{padding:4px 14px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}
+.sd-item{padding:9px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s}
+.sd-item:hover{background:#f0f7ff}
+.sd-icon{font-size:15px;width:22px;text-align:center}
+.sd-label{font-size:13px;font-weight:500}
+.sd-sub{font-size:11px;color:#94a3b8;margin-top:1px}
+.sd-badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600}
+
+#topbar-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-stat{font-size:12px;color:#64748b;display:flex;align-items:center;gap:5px}
+.tb-stat strong{color:#1e293b}
+#btn-refresh{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:5px 12px;
+  font-size:12px;color:#475569;display:flex;align-items:center;gap:5px}
+#btn-refresh:hover{background:#e2e8f0}
+
+/* Body split */
+#body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+#sidebar{width:220px;background:#fff;border-right:1px solid #e2e8f0;flex-shrink:0;
+  display:flex;flex-direction:column;overflow-y:auto}
+.nav-section{padding:14px 0 6px}
+.nav-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+  letter-spacing:.08em;padding:0 16px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;
+  border-radius:0;transition:background .15s;font-size:13px;font-weight:500;color:#475569}
+.nav-item:hover{background:#f8fafc;color:#1e293b}
+.nav-item.active{background:#eff6ff;color:#2563eb;font-weight:600}
+.nav-item .ni{font-size:15px;width:20px;text-align:center}
+.nav-count{margin-left:auto;font-size:11px;background:#f1f5f9;padding:1px 7px;
+  border-radius:10px;color:#64748b;font-weight:600}
+
+.sidebar-project-list{padding:4px 0}
+.sp-item{padding:7px 16px;cursor:pointer;font-size:12px;color:#64748b;
+  display:flex;align-items:center;gap:8px;transition:background .15s;border-left:3px solid transparent}
+.sp-item:hover{background:#f8fafc;color:#1e293b}
+.sp-item.active{background:#eff6ff;border-left-color:#2563eb;color:#2563eb}
+.sp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Main */
+#main{flex:1;overflow-y:auto;padding:20px}
+
+/* ── Cards ────────────────────────────────────────── */
+.card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:16px;overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;
+  display:flex;align-items:center;gap:10px}
+.card-title{font-size:14px;font-weight:700;color:#1e293b}
+.card-subtitle{font-size:12px;color:#64748b;margin-top:2px}
+.card-body{padding:16px 18px}
+.card-icon{font-size:20px}
+
+/* ── Stats Grid ────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px 18px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.stat-card .sc-val{font-size:26px;font-weight:800;color:#1e293b;line-height:1}
+.stat-card .sc-lbl{font-size:11px;color:#64748b;margin-top:5px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.stat-card .sc-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+.stat-card.c-crit{border-left:3px solid #dc2626}
+.stat-card.c-high{border-left:3px solid #f97316}
+.stat-card.c-med{border-left:3px solid #eab308}
+.stat-card.c-low{border-left:3px solid #22c55e}
+.stat-card.c-blue{border-left:3px solid #3b82f6}
+
+/* ── Risk Badge ────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.03em}
+.badge-CRITICAL,.badge-critical{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.badge-HIGH,.badge-high{background:#fff7ed;color:#ea580c;border:1px solid #fed7aa}
+.badge-MEDIUM,.badge-medium,.badge-WARNING,.badge-warning{background:#fefce8;color:#ca8a04;border:1px solid #fef08a}
+.badge-LOW,.badge-low{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.badge-HEALTHY,.badge-healthy,.badge-INFO,.badge-info{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.badge-UNKNOWN,.badge-unknown{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ── Section Tabs ──────────────────────────────────── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e2e8f0;margin-bottom:18px}
+.tab{padding:9px 16px;font-size:13px;font-weight:500;color:#64748b;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:#1e293b}
+.tab.active{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
+
+/* ── Page Headers ──────────────────────────────────── */
+.page-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
+.ph-icon{font-size:32px;line-height:1}
+.ph-title{font-size:20px;font-weight:800;color:#1e293b}
+.ph-meta{font-size:12px;color:#64748b;margin-top:4px;display:flex;flex-wrap:wrap;gap:12px}
+.ph-meta-item{display:flex;align-items:center;gap:5px}
+
+/* ── Narrative Block ───────────────────────────────── */
+.narrative{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+  padding:14px 16px;font-size:13px;color:#334155;line-height:1.7;margin-bottom:14px}
+
+/* ── LLM Section Cards ─────────────────────────────── */
+.llm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.llm-grid{grid-template-columns:1fr}}
+.llm-sec{background:#fff;border-radius:10px;border:1px solid #e2e8f0;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+.llm-sec.wide{grid-column:1/-1}
+.llm-sec-head{padding:11px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid #f1f5f9}
+.llm-sec-icon{font-size:16px}
+.llm-sec-title{font-size:12px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.05em}
+.llm-sec-body{padding:13px 14px;font-size:13px;color:#334155;line-height:1.75}
+
+.llm-sec.sec-overview .llm-sec-head{background:#eff6ff}
+.llm-sec.sec-state .llm-sec-head{background:#f0fdf4}
+.llm-sec.sec-trend .llm-sec-head{background:#fff7ed}
+.llm-sec.sec-forecast .llm-sec-head{background:#faf5ff}
+.llm-sec.sec-evidence .llm-sec-head{background:#f0f9ff}
+.llm-sec.sec-impact .llm-sec-head{background:#fef2f2}
+.llm-sec.sec-actions .llm-sec-head{background:#f0fdf4}
+.llm-sec.sec-confidence .llm-sec-head{background:#fefce8}
+
+/* ── Action List ───────────────────────────────────── */
+.action-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.action-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
+  background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:13px}
+.action-num{width:22px;height:22px;border-radius:50%;background:#2563eb;color:#fff;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+/* ── Alert List ────────────────────────────────────── */
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+  border-radius:8px;font-size:13px;border-left:3px solid}
+.alert-item.crit{background:#fef2f2;border-color:#dc2626;color:#7f1d1d}
+.alert-item.high{background:#fff7ed;border-color:#ea580c;color:#7c2d12}
+.alert-item.warn{background:#fefce8;border-color:#ca8a04;color:#713f12}
+.alert-item.info{background:#eff6ff;border-color:#3b82f6;color:#1e3a8a}
+
+/* ── Resources Table ───────────────────────────────── */
+.res-table{width:100%;border-collapse:collapse}
+.res-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;
+  color:#64748b;text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.res-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle}
+.res-table tr:hover td{background:#fafafa}
+.res-table tr:last-child td{border-bottom:none}
+.res-name-cell{display:flex;align-items:center;gap:8px;cursor:pointer;color:#2563eb}
+.res-name-cell:hover{text-decoration:underline}
+.res-cat-chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;
+  background:#eff6ff;color:#2563eb}
+.res-cat-chip.Storage{background:#faf5ff;color:#7c3aed}
+.res-cat-chip.Network{background:#fff7ed;color:#c2410c}
+.res-cat-chip.Databases{background:#f0fdf4;color:#15803d}
+.res-cat-chip.Container{background:#fef2f2;color:#b91c1c}
+.res-metric{font-size:12px;color:#475569;font-family:monospace}
+.trend-arrow{font-size:12px}
+.trend-up{color:#dc2626}
+.trend-down{color:#16a34a}
+.trend-stable{color:#94a3b8}
+
+/* ── Forecast Table ────────────────────────────────── */
+.forecast-table{width:100%;border-collapse:collapse}
+.forecast-table th{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;
+  letter-spacing:.05em;padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc;text-align:center}
+.forecast-table td{padding:10px 12px;text-align:center;border-bottom:1px solid #f1f5f9;font-size:13px}
+.forecast-table tr:last-child td{border-bottom:none}
+.forecast-table td:first-child{text-align:left;font-weight:600;color:#475569}
+.fval{font-family:monospace;font-size:13px;font-weight:700}
+.frange{font-size:11px;color:#94a3b8;margin-top:2px}
+
+/* ── Insight Cards ─────────────────────────────────── */
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.insight-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+.insight-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.10)}
+.insight-head{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f1f5f9}
+.insight-icon{font-size:18px}
+.insight-name{font-size:13px;font-weight:700;color:#1e293b;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.insight-body{padding:11px 14px}
+.insight-row{display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px}
+.insight-row:last-child{border-bottom:none}
+.ir-label{color:#64748b}
+.ir-val{font-weight:600;color:#1e293b}
+.insight-text{font-size:12px;color:#475569;line-height:1.6;margin-top:8px}
+
+/* ── Metric Chips ──────────────────────────────────── */
+.metric-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.m-chip{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600;
+  display:flex;align-items:center;gap:5px;border:1px solid}
+.m-chip.CRITICAL{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.m-chip.WARNING{background:#fefce8;color:#ca8a04;border-color:#fef08a}
+.m-chip.HEALTHY{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0}
+.m-chip.UNKNOWN{background:#f8fafc;color:#64748b;border-color:#e2e8f0}
+
+/* ── Correlation Chips ─────────────────────────────── */
+.corr-list{display:flex;flex-direction:column;gap:7px}
+.corr-item{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;
+  background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;color:#334155}
+
+/* ── Provider Pills ─────────────────────────────────── */
+.prov-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  border-radius:6px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569}
+.prov-AWS{background:#fff7ed;color:#c2410c}
+.prov-Azure{background:#eff6ff;color:#1d4ed8}
+.prov-GCP{background:#f0fdf4;color:#15803d}
+.prov-OCI{background:#faf5ff;color:#7c3aed}
+
+/* ── Progress Bar ──────────────────────────────────── */
+.prog-bar{height:8px;border-radius:4px;background:#f1f5f9;overflow:hidden;margin-top:4px}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s}
+.prog-fill.c-green{background:#22c55e}
+.prog-fill.c-yellow{background:#eab308}
+.prog-fill.c-orange{background:#f97316}
+.prog-fill.c-red{background:#ef4444}
+
+/* ── Empty / Loading ───────────────────────────────── */
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state .es-icon{font-size:48px;margin-bottom:12px}
+.empty-state .es-title{font-size:16px;font-weight:600;color:#64748b;margin-bottom:6px}
+.empty-state .es-text{font-size:13px}
+.loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:#64748b}
+.spinner{width:20px;height:20px;border:2px solid #e2e8f0;border-top-color:#3b82f6;
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Two Column Layout ─────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.two-col{grid-template-columns:1fr}}
+
+/* ── Info rows ─────────────────────────────────────── */
+.info-rows{display:flex;flex-direction:column;gap:6px}
+.info-row{display:flex;gap:10px;font-size:13px}
+.ir-k{min-width:130px;color:#64748b;font-weight:500;flex-shrink:0}
+.ir-v{color:#1e293b;word-break:break-word}
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#cbd5e1}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Top Bar -->
+<div id="topbar">
+  <div id="logo"><span>☁️</span> Cloud Analytics</div>
+
+  <div id="search-wrap">
+    <input id="search-input" type="text" placeholder="Search projects or resources…" autocomplete="off"/>
+    <div id="search-dropdown"></div>
+  </div>
+
+  <div id="topbar-actions">
+    <div class="tb-stat">📦 <span id="tb-resources">—</span> resources</div>
+    <div class="tb-stat">🗂 <span id="tb-projects">—</span> projects</div>
+    <div class="tb-stat">⚠️ <span id="tb-anomalous">—</span> anomalous</div>
+    <button id="btn-refresh" onclick="loadStats()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- Body -->
+<div id="body">
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="nav-section">
+    <div class="nav-label">Platform</div>
+    <div class="nav-item active" id="nav-overview" onclick="navTo('overview')">
+      <span class="ni">📊</span> Overview
+    </div>
+    <div class="nav-item" id="nav-projects" onclick="navTo('projects')">
+      <span class="ni">🗂</span> Projects <span class="nav-count" id="nc-projects">—</span>
+    </div>
+    <div class="nav-item" id="nav-resources" onclick="navTo('resources')">
+      <span class="ni">📦</span> Resources <span class="nav-count" id="nc-resources">—</span>
+    </div>
+    <div class="nav-item" id="nav-summaries" onclick="navTo('summaries')">
+      <span class="ni">🤖</span> LLM Summaries
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Projects</div>
+    <div id="sidebar-projects" class="sidebar-project-list"></div>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="view-overview"></div>
+  <div id="view-projects" style="display:none"></div>
+  <div id="view-resources" style="display:none"></div>
+  <div id="view-summaries" style="display:none"></div>
+  <div id="view-project-detail" style="display:none"></div>
+  <div id="view-resource-detail" style="display:none"></div>
+</div>
+
+</div><!-- /body -->
+</div><!-- /app -->
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function fmt(v, unit) {
+  if (v === null || v === undefined) return '—';
+  const n = parseFloat(v);
+  if (isNaN(n)) return String(v);
+  if (unit === '%') return n.toFixed(1) + '%';
+  if (unit === 'bytes/s') {
+    if (n >= 1073741824) return (n/1073741824).toFixed(2) + ' GB/s';
+    if (n >= 1048576)    return (n/1048576).toFixed(2) + ' MB/s';
+    if (n >= 1024)       return (n/1024).toFixed(1) + ' KB/s';
+    return n.toFixed(0) + ' B/s';
+  }
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return n % 1 === 0 ? n.toString() : n.toFixed(2);
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  try { return new Date(s).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}); } catch(_){ return s; }
+}
+
+function guessUnit(metric) {
+  const m = (metric||'').toLowerCase();
+  if (m.includes('bytes') || m.includes('bandwidth') || m.includes('throughput')) return 'bytes/s';
+  if (m.includes('pct') || m.includes('percent') || m.includes('%') || m.includes('utiliz') || m.includes('usage')) return '%';
+  return '';
+}
+
+function riskClass(lvl) {
+  const l = (lvl||'').toUpperCase();
+  return {CRITICAL:'crit',HIGH:'high',MEDIUM:'warn',WARNING:'warn',LOW:'info',HEALTHY:'info',INFO:'info'}[l]||'info';
+}
+
+function riskBadge(lvl) {
+  const l = (lvl||'UNKNOWN').toUpperCase();
+  return `<span class="badge badge-${l}"><span class="badge-dot"></span>${l}</span>`;
+}
+
+function scoreToRisk(score) {
+  if (score >= 90) return 'CRITICAL';
+  if (score >= 75) return 'HIGH';
+  if (score >= 50) return 'MEDIUM';
+  if (score > 0)  return 'LOW';
+  return 'HEALTHY';
+}
+
+function catIcon(cat) {
+  return {Compute:'🖥️',Storage:'💾',Network:'🌐',Container:'📦',Databases:'🗄️'}[cat]||'☁️';
+}
+
+function provBadge(prov) {
+  const icons = {AWS:'🔶',Azure:'🔷',GCP:'🟢',OCI:'🟠'};
+  const cls = `prov-pill prov-${prov||''}`;
+  return `<span class="${cls}">${icons[prov]||'☁️'} ${prov||'—'}</span>`;
+}
+
+function trendArrow(dir) {
+  if (!dir) return '';
+  const d = dir.toLowerCase();
+  if (d.includes('increas')||d.includes('ris')||d.includes('up'))   return '<span class="trend-arrow trend-up">↑</span>';
+  if (d.includes('decreas')||d.includes('fall')||d.includes('down')) return '<span class="trend-arrow trend-down">↓</span>';
+  return '<span class="trend-arrow trend-stable">→</span>';
+}
+
+function scoreColor(s) {
+  if (s >= 90) return '#dc2626';
+  if (s >= 75) return '#f97316';
+  if (s >= 50) return '#eab308';
+  return '#22c55e';
+}
+
+function progClass(s) {
+  if (s >= 90) return 'c-red';
+  if (s >= 75) return 'c-orange';
+  if (s >= 50) return 'c-yellow';
+  return 'c-green';
+}
+
+async function apiFetch(path) {
+  const r = await fetch(path);
+  if (!r.ok) { const t = await r.text(); throw new Error(t || r.statusText); }
+  return r.json();
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Global project registry (project IDs are hex strings but still safer via registry)
+const _PROJ = {};
+function _regProj(pid) {
+  const key = 'p_' + pid.replace(/[^a-zA-Z0-9]/g,'_');
+  _PROJ[key] = pid;
+  return key;
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+let _currentTopView = 'overview';
+
+function showView(name) {
+  ['overview','projects','resources','summaries','project-detail','resource-detail'].forEach(v => {
+    const e = $('view-'+v); if (e) e.style.display = 'none';
+  });
+  const t = $('view-'+name); if (t) t.style.display = '';
+
+  ['nav-overview','nav-projects','nav-resources','nav-summaries'].forEach(id => {
+    const e = $(id); if (e) e.classList.remove('active');
+  });
+  const map = {overview:'nav-overview',projects:'nav-projects',resources:'nav-resources',summaries:'nav-summaries'};
+  if (map[name]) { const e = $(map[name]); if (e) e.classList.add('active'); }
+}
+
+function navTo(view) {
+  _currentTopView = view;
+  showView(view);
+  if (view === 'projects')  loadProjectsView();
+  if (view === 'resources') loadResourcesView();
+  if (view === 'summaries') loadSummariesView();
+  if (view === 'overview')  renderOverview(_cachedStats);
+}
+
+// ── Stats ──────────────────────────────────────────────────────
+let _cachedStats = null;
+
+async function loadStats() {
+  try {
+    const s = await apiFetch('/api/stats');
+    _cachedStats = s;
+    $('tb-resources').textContent = (s.total_resources||0).toLocaleString();
+    $('tb-projects').textContent  = (s.total_projects||0).toLocaleString();
+    $('tb-anomalous').textContent = (s.total_anomalous||0).toLocaleString();
+    $('nc-projects').textContent  = s.total_projects||'—';
+    $('nc-resources').textContent = s.total_resources||'—';
+    renderOverview(s);
+  } catch(e) { console.error('stats', e); }
+}
+
+// ── Sidebar project list ───────────────────────────────────────
+async function loadSidebarProjects() {
+  try {
+    const data = await apiFetch('/api/projects');
+    const projects = data.projects || [];
+    const container = $('sidebar-projects');
+    if (!container) return;
+    container.innerHTML = projects.slice(0,50).map(pid => {
+      const pkey = _regProj(pid);
+      return `<div class="sp-item" id="sp-${escHtml(pkey)}" onclick="openProject(_PROJ['${pkey}'])">
+        <span class="sp-dot" style="background:#94a3b8"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${escHtml(pid)}">${pid.length>22?escHtml(pid.slice(0,20))+'…':escHtml(pid)}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('sidebar projects', e); }
+}
+
+// ── Overview ───────────────────────────────────────────────────
+function renderOverview(s) {
+  if (!s) return;
+  const view = $('view-overview');
+  if (!view) return;
+  const rd   = s.risk_distribution || {};
+  const cats = s.categories || {};
+  const provs = s.providers || {};
+  const total = s.total_resources || 1;
+
+  const catRows = Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,n]) =>
+    `<tr>
+      <td><span class="res-cat-chip ${c}">${catIcon(c)} ${c}</span></td>
+      <td style="width:100%">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="prog-bar" style="flex:1;height:6px"><div class="prog-fill c-blue" style="width:${Math.min(100,(n/total*100)).toFixed(0)}%;background:#3b82f6"></div></div>
+          <b style="font-size:12px;min-width:28px;text-align:right">${n}</b>
+        </div>
+      </td>
+    </tr>`
+  ).join('');
+
+  const provRows = Object.entries(provs).sort((a,b)=>b[1]-a[1]).map(([p,n]) =>
+    `<tr><td>${provBadge(p)}</td><td><b>${n}</b></td></tr>`
+  ).join('');
+
+  view.innerHTML = `
+    <div class="page-header">
+      <div class="ph-icon">☁️</div>
+      <div>
+        <div class="ph-title">Cloud Analytics Platform</div>
+        <div class="ph-meta">
+          <span class="ph-meta-item">🟢 Live Dashboard</span>
+          <span class="ph-meta-item">📅 ${new Date().toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card c-blue">
+        <div class="sc-val">${(s.total_resources||0).toLocaleString()}</div>
+        <div class="sc-lbl">Total Resources</div>
+        <div class="sc-sub">${s.total_projects||0} projects</div>
+      </div>
+      <div class="stat-card ${(rd.CRITICAL||0)>0?'c-crit':'c-low'}">
+        <div class="sc-val" style="color:${(rd.CRITICAL||0)>0?'#dc2626':'#22c55e'}">${(rd.CRITICAL||0)+(rd.HIGH||0)}</div>
+        <div class="sc-lbl">At Risk</div>
+        <div class="sc-sub">${rd.CRITICAL||0} critical · ${rd.HIGH||0} high</div>
+      </div>
+      <div class="stat-card ${(s.total_anomalous||0)>0?'c-high':'c-low'}">
+        <div class="sc-val" style="color:${(s.total_anomalous||0)>0?'#f97316':'#22c55e'}">${s.total_anomalous||0}</div>
+        <div class="sc-lbl">Anomalous</div>
+        <div class="sc-sub">Outside baseline</div>
+      </div>
+      <div class="stat-card ${(s.total_alerts||0)>0?'c-high':'c-low'}">
+        <div class="sc-val" style="color:${(s.total_alerts||0)>0?'#f97316':'#22c55e'}">${s.total_alerts||0}</div>
+        <div class="sc-lbl">Active Alerts</div>
+        <div class="sc-sub">Firing alert rules</div>
+      </div>
+      <div class="stat-card c-blue">
+        <div class="sc-val">${s.llm_summaries||0}</div>
+        <div class="sc-lbl">LLM Summaries</div>
+        <div class="sc-sub">AI-generated reports</div>
+      </div>
+      <div class="stat-card c-low">
+        <div class="sc-val">${(rd.LOW||0)+(rd.HEALTHY||0)+(rd.UNKNOWN||0)}</div>
+        <div class="sc-lbl">Healthy</div>
+        <div class="sc-sub">${rd.MEDIUM||0} medium risk</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><span class="card-icon">📊</span><div><div class="card-title">Risk Distribution</div></div></div>
+        <div class="card-body">
+          ${['CRITICAL','HIGH','MEDIUM','LOW'].map(lbl => {
+            const n = rd[lbl]||0;
+            const pct = total ? Math.max(1,(n/total*100)).toFixed(0) : 0;
+            return `<div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                ${riskBadge(lbl)} <b style="font-size:12px">${n} <span style="color:#94a3b8;font-weight:400">(${pct}%)</span></b>
+              </div>
+              <div class="prog-bar"><div class="prog-fill ${progClass(lbl==='CRITICAL'?95:lbl==='HIGH'?80:lbl==='MEDIUM'?55:5)}" style="width:${pct}%"></div></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-icon">🗂️</span><div><div class="card-title">By Category</div></div></div>
+        <div class="card-body" style="padding:0"><table class="res-table">${catRows||'<tr><td colspan="2" style="padding:20px;text-align:center;color:#94a3b8">No data</td></tr>'}</table></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><span class="card-icon">☁️</span><div><div class="card-title">By Cloud Provider</div></div></div>
+        <div class="card-body" style="padding:0"><table class="res-table">${provRows||'<tr><td colspan="2" style="padding:20px;text-align:center;color:#94a3b8">No data</td></tr>'}</table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-icon">🚀</span><div><div class="card-title">Quick Start</div></div></div>
+        <div class="card-body">
+          <ul class="action-list">
+            <li class="action-item"><span class="action-num">1</span>Use the <strong>search bar</strong> above to find any project or resource instantly</li>
+            <li class="action-item"><span class="action-num">2</span>Click <strong>Projects</strong> in the sidebar to browse all monitored cloud projects</li>
+            <li class="action-item"><span class="action-num">3</span>Click <strong>LLM Summaries</strong> to read AI-generated project intelligence reports</li>
+          </ul>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Projects View ──────────────────────────────────────────────
+async function loadProjectsView() {
+  const view = $('view-projects');
+  view.innerHTML = `<div class="loading"><div class="spinner"></div> Loading projects…</div>`;
+  try {
+    const [pdata, sdata] = await Promise.all([apiFetch('/api/projects'), apiFetch('/api/summaries?limit=200')]);
+    const projects = pdata.projects || [];
+    const byProj = {};
+    (sdata.summaries||[]).forEach(s => { byProj[s.project] = s; });
+
+    view.innerHTML = `
+      <div class="page-header">
+        <div class="ph-icon">🗂️</div>
+        <div><div class="ph-title">All Projects</div><div class="ph-meta">${projects.length} projects monitored across all cloud providers</div></div>
+      </div>
+      <div class="insight-grid" id="proj-grid"></div>`;
+
+    const grid = $('proj-grid');
+    projects.forEach(pid => {
+      const s = byProj[pid] || {};
+      const rl = s.risk_level || 'UNKNOWN';
+      const cats = (s.categories||[]).join(' · ') || '—';
+      const div = document.createElement('div');
+      div.className = 'insight-card';
+      div.onclick = () => openProject(pid);  // closure captures pid directly — safe
+      div.innerHTML = `
+        <div class="insight-head">
+          <span class="insight-icon">🗂️</span>
+          <span class="insight-name" title="${pid}">${pid}</span>
+          ${riskBadge(rl)}
+        </div>
+        <div class="insight-body">
+          ${s.project_overview ? `<div class="insight-text">${s.project_overview.slice(0,160)}${s.project_overview.length>160?'…':''}</div>` : ''}
+          <div class="insight-row" style="margin-top:8px"><span class="ir-label">Resources</span><span class="ir-val">${s.resource_count||'?'}</span></div>
+          <div class="insight-row"><span class="ir-label">Categories</span><span class="ir-val" style="font-size:11px">${cats}</span></div>
+          <div class="insight-row"><span class="ir-label">Updated</span><span class="ir-val" style="font-size:11px">${fmtDate(s.generated_at)}</span></div>
+        </div>`;
+      grid.appendChild(div);
+    });
+  } catch(e) {
+    view.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Error loading projects</div><div class="es-text">${e.message}</div></div>`;
+  }
+}
+
+// ── Global resource ID registry (avoids string escaping in onclick) ──────────
+const _RES = {};  // key → resource_id
+
+function _regRes(rid) {
+  // Use a short stable key derived from the resource_id
+  const key = 'r_' + btoa(rid).replace(/[^a-zA-Z0-9]/g,'').slice(0,16);
+  _RES[key] = rid;
+  return key;
+}
+
+// ── Resources View ─────────────────────────────────────────────
+async function loadResourcesView() {
+  const view = $('view-resources');
+  view.innerHTML = `<div class="loading"><div class="spinner"></div> Loading resources…</div>`;
+  try {
+    const data = await apiFetch('/api/resources/all?limit=500');
+    const resources = data.resources || [];
+    const total = data.total || resources.length;
+
+    const rows = resources.map(r => {
+      const unit = guessUnit(r.metric_name);
+      const cv   = fmt(r.current_value, unit);
+      const score = r.risk_score || 0;
+      const rl    = scoreToRisk(score);
+      const trend = r.trend_direction || r.dashboard_trend || '';
+      const rkey  = _regRes(r.resource_id || '');
+      return `<tr>
+        <td><div class="res-name-cell" onclick="openResource(_RES['${rkey}'])">
+          ${catIcon(r.category)} <span style="overflow:hidden;text-overflow:ellipsis;max-width:200px;display:inline-block;vertical-align:middle">${escHtml(r.resource_name||r.resource_id)}</span>
+        </div></td>
+        <td><span class="res-cat-chip ${r.category}">${r.category||'—'}</span></td>
+        <td>${provBadge(r.provider)}</td>
+        <td style="font-size:11px;color:#64748b">${r.location||'—'}</td>
+        <td class="res-metric" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.metric_name||'')}">${escHtml(r.metric_name||'—')}</td>
+        <td class="res-metric"><b>${cv}</b></td>
+        <td>${trendArrow(trend)}</td>
+        <td>${riskBadge(rl)}</td>
+        <td style="font-size:11px;color:#64748b">${fmtDate(r.prediction_timestamp)}</td>
+      </tr>`;
+    }).join('');
+
+    view.innerHTML = `
+      <div class="page-header">
+        <div class="ph-icon">📦</div>
+        <div><div class="ph-title">All Resources</div><div class="ph-meta">${total.toLocaleString()} resources (showing ${resources.length})</div></div>
+      </div>
+      <div class="card"><div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="res-table">
+          <thead><tr><th>Name</th><th>Category</th><th>Provider</th><th>Region</th><th>Metric</th><th>Current</th><th>Trend</th><th>Risk</th><th>Updated</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan="9" style="padding:30px;text-align:center;color:#94a3b8">No resources found</td></tr>'}</tbody>
+        </table>
+      </div></div>`;
+  } catch(e) {
+    view.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Error loading resources</div><div class="es-text">${e.message}</div></div>`;
+  }
+}
+
+// ── Project Detail ─────────────────────────────────────────────
+async function openProject(pid) {
+  document.querySelectorAll('.sp-item').forEach(e => e.classList.remove('active'));
+  showView('project-detail');
+  const view = $('view-project-detail');
+  view.innerHTML = `<div class="loading"><div class="spinner"></div> Loading project…</div>`;
+  try {
+    const data = await apiFetch('/api/project/'+encodeURIComponent(pid));
+    const s    = data.summary || {};
+    const resources = data.resources || [];
+    const rl   = s.risk_level || 'UNKNOWN';
+    const alerts = s.priority_alerts || [];
+    const corrs  = s.cross_category_correlations || [];
+    const recs   = s.recommended_action_order || [];
+    const insights = s.resource_insights || [];
+
+    const provSet = [...new Set(resources.map(r=>r.provider).filter(Boolean))];
+
+    view.innerHTML = `
+      <div class="page-header">
+        <div class="ph-icon">🗂️</div>
+        <div style="flex:1;min-width:0">
+          <div class="ph-title" style="word-break:break-all">${pid}</div>
+          <div class="ph-meta">
+            ${riskBadge(rl)}
+            ${provSet.map(p=>provBadge(p)).join(' ')}
+            <span class="ph-meta-item">📦 ${data.resource_count||0} resources</span>
+            <span class="ph-meta-item">🏷️ ${(s.categories||[]).join(' · ')||'—'}</span>
+            ${s.generated_at?`<span class="ph-meta-item">🕐 ${fmtDate(s.generated_at)}</span>`:''}
+            ${s.model?`<span class="ph-meta-item">🤖 ${s.model}</span>`:''}
+          </div>
+        </div>
+        <button onclick="navTo('projects')" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 14px;font-size:13px;white-space:nowrap">← Projects</button>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="projTab('overview',this)">📋 Overview</div>
+        <div class="tab" onclick="projTab('insights',this)">💡 Resource Insights</div>
+        <div class="tab" onclick="projTab('resources',this)">📦 Resources (${resources.length})</div>
+        <div class="tab" onclick="projTab('recommendations',this)">✅ Recommendations</div>
+      </div>
+
+      <!-- Overview tab -->
+      <div id="ptab-overview">
+        ${s.project_overview ? `<div class="card"><div class="card-header"><span class="card-icon">🏗️</span><div class="card-title">Project Overview</div></div>
+          <div class="card-body"><div class="narrative">${s.project_overview}</div></div></div>` : ''}
+        ${s.narrative ? `<div class="card"><div class="card-header"><span class="card-icon">📋</span><div class="card-title">Executive Summary</div></div>
+          <div class="card-body"><div class="narrative">${s.narrative}</div></div></div>` : ''}
+        ${alerts.length ? `<div class="card"><div class="card-header"><span class="card-icon">🚨</span><div class="card-title">Priority Alerts</div><span class="badge badge-CRITICAL" style="margin-left:auto">${alerts.length}</span></div>
+          <div class="card-body"><div class="alert-list">${alerts.map(a=>`<div class="alert-item high">⚠️ ${a}</div>`).join('')}</div></div></div>` : ''}
+        ${corrs.length ? `<div class="card"><div class="card-header"><span class="card-icon">🔗</span><div class="card-title">Cross-Category Correlations</div></div>
+          <div class="card-body"><div class="corr-list">${corrs.map(c=>`<div class="corr-item">🔗 ${c}</div>`).join('')}</div></div></div>` : ''}
+        ${recs.length ? `<div class="card"><div class="card-header"><span class="card-icon">✅</span><div class="card-title">Recommended Actions</div></div>
+          <div class="card-body"><ol class="action-list">${recs.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span><span>${r}</span></li>`).join('')}</ol></div></div>` : ''}
+        ${!s.project_overview&&!s.narrative&&!alerts.length?`<div class="empty-state"><div class="es-icon">🤖</div><div class="es-title">No LLM summary yet</div><div class="es-text">Run pipeline with LLM enabled to generate project summaries</div></div>`:''}
+      </div>
+
+      <!-- Insights tab -->
+      <div id="ptab-insights" style="display:none">
+        ${insights.length ?
+          `<div class="insight-grid">${insights.map(ins=>`
+            <div class="insight-card">
+              <div class="insight-head">
+                <span class="insight-icon">${catIcon(ins.category)}</span>
+                <span class="insight-name" title="${ins.resource_name||''}">${ins.resource_name||'—'}</span>
+                <span class="res-cat-chip ${ins.category}">${ins.category||'—'}</span>
+              </div>
+              <div class="insight-body">
+                ${ins.what_this_resource_is?`<div class="insight-text"><b>What it is:</b> ${ins.what_this_resource_is}</div>`:''}
+                ${ins.metric_being_monitored?`<div class="insight-row" style="margin-top:6px"><span class="ir-label">📊 Metric</span><span class="ir-val" style="font-size:11px">${ins.metric_being_monitored}</span></div>`:''}
+                ${ins.current_health?`<div class="insight-text" style="margin-top:6px"><b>Current:</b> ${ins.current_health}</div>`:''}
+                ${ins.forecast_summary?`<div class="insight-text"><b>Forecast:</b> ${ins.forecast_summary}</div>`:''}
+                ${ins.trend_assessment?`<div class="insight-text"><b>Trend:</b> ${ins.trend_assessment}</div>`:''}
+                ${ins.operational_risks?`<div class="alert-item warn" style="margin-top:8px;border-radius:7px">⚠️ ${ins.operational_risks}</div>`:''}
+              </div>
+            </div>`).join('')}</div>` :
+          `<div class="empty-state"><div class="es-icon">💡</div><div class="es-title">No resource insights</div><div class="es-text">Run pipeline with LLM enabled to generate per-resource insights</div></div>`}
+      </div>
+
+      <!-- Resources tab -->
+      <div id="ptab-resources" style="display:none">
+        ${buildResourceTableHTML(resources)}
+      </div>
+
+      <!-- Recommendations tab -->
+      <div id="ptab-recommendations" style="display:none">
+        ${recs.length ?
+          `<div class="card"><div class="card-header"><span class="card-icon">✅</span><div class="card-title">Recommended Actions — Priority Order</div></div>
+           <div class="card-body"><ol class="action-list">${recs.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span><span>${r}</span></li>`).join('')}</ol></div></div>` :
+          `<div class="empty-state"><div class="es-icon">✅</div><div class="es-title">No recommendations</div><div class="es-text">All resources appear healthy</div></div>`}
+      </div>`;
+  } catch(e) {
+    view.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Error loading project</div><div class="es-text">${e.message}</div></div>`;
+  }
+}
+
+function projTab(name, el) {
+  ['overview','insights','resources','recommendations'].forEach(t => {
+    const p = $('ptab-'+t); if(p) p.style.display = t===name?'':'none';
+  });
+  document.querySelectorAll('#view-project-detail .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function buildResourceTableHTML(resources) {
+  if (!resources||!resources.length) return `<div class="empty-state"><div class="es-icon">📦</div><div class="es-title">No resources</div></div>`;
+  const rows = resources.map(r => {
+    const unit  = guessUnit(r.metric_name);
+    const cv    = fmt(r.current_value, unit);
+    const score = r.risk_score || 0;
+    const rl    = scoreToRisk(score);
+    const trend = r.trend_direction || r.dashboard_trend || '';
+    const rkey  = _regRes(r.resource_id || '');
+    return `<tr>
+      <td><div class="res-name-cell" onclick="openResource(_RES['${rkey}'])">
+        ${catIcon(r.category)} ${escHtml(r.resource_name||r.resource_id)}
+      </div></td>
+      <td><span class="res-cat-chip ${r.category}">${r.category||'—'}</span></td>
+      <td>${provBadge(r.provider)}</td>
+      <td style="font-size:11px;color:#64748b">${r.location||'—'}</td>
+      <td class="res-metric" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.metric_name||'')}">${escHtml(r.metric_name||'—')}</td>
+      <td class="res-metric"><b>${cv}</b></td>
+      <td>${trendArrow(trend)}</td>
+      <td>${riskBadge(rl)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card"><div class="card-body" style="padding:0;overflow-x:auto">
+    <table class="res-table">
+      <thead><tr><th>Name</th><th>Category</th><th>Provider</th><th>Region</th><th>Metric</th><th>Current</th><th>Trend</th><th>Risk</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>`;
+}
+
+// ── Resource Detail ────────────────────────────────────────────
+// Use query param (?resource_id=...) to safely handle Azure/GCP IDs that contain slashes
+async function openResource(rid) {
+  showView('resource-detail');
+  const view = $('view-resource-detail');
+  view.innerHTML = `<div class="loading"><div class="spinner"></div> Loading resource…</div>`;
+  try {
+    const doc = await apiFetch('/api/resource/detail?resource_id='+encodeURIComponent(rid));
+    renderResource(view, doc, rid);
+  } catch(e) {
+    view.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Error loading resource</div><div class="es-text">${e.message}</div></div>`;
+  }
+}
+
+function renderResource(view, doc, rid) {
+  const bf   = doc.behavioral_forecast || {};
+  const dash = doc.dashboard || {};
+  const llm  = doc.llm_explanation || {};
+  const cs   = llm.computed_stats || {};
+  const score = dash.display_score || 0;
+  const rl    = (llm.risk_level && llm.risk_level !== 'UNKNOWN') ? llm.risk_level : scoreToRisk(score);
+  const metricName = bf.metric_name || doc.metric_name || '—';
+  const unit = guessUnit(metricName);
+  const cv   = fmt(bf.current_value, unit);
+  const fhorizons = cs.forecast_horizons || [];
+  const domMetrics = cs.dominant_metrics || [];
+  const eq   = cs.evaluation_quality || {};
+  const anomCtx = cs.anomaly_context || {};
+  const breachCtx = cs.breach_analysis || {};
+  const catSigs   = cs.category_operational_signals || {};
+  const hasLLM = !!(llm.resource_overview || llm.current_state || llm.trend_analysis || llm.forecast);
+  const recs   = llm.recommended_actions || doc.recommendations || [];
+
+  view.innerHTML = `
+    <div class="page-header">
+      <div class="ph-icon">${catIcon(doc.category)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ph-title" style="word-break:break-all">${doc.resource_name||rid}</div>
+        <div class="ph-meta">
+          ${riskBadge(rl)}
+          ${provBadge(doc.provider)}
+          <span class="ph-meta-item"><span class="res-cat-chip ${doc.category}">${doc.category||'—'}</span></span>
+          <span class="ph-meta-item">📍 ${doc.location||'—'}</span>
+          <span class="ph-meta-item">⚙️ ${doc.component||doc.canonical_resource_type||'—'}</span>
+          ${doc.prediction_timestamp?`<span class="ph-meta-item">🕐 ${fmtDate(doc.prediction_timestamp)}</span>`:''}
+        </div>
+      </div>
+      <button onclick="history.back()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 14px;font-size:13px;white-space:nowrap">← Back</button>
+    </div>
+
+    <!-- Quick stats bar -->
+    <div class="stats-grid" style="margin-bottom:18px">
+      <div class="stat-card c-blue">
+        <div class="sc-val">${cv}</div>
+        <div class="sc-lbl">Current Value</div>
+        <div class="sc-sub" style="font-size:10px;word-break:break-all">${metricName}</div>
+      </div>
+      <div class="stat-card ${progClass(score)}">
+        <div class="sc-val" style="color:${scoreColor(score)}">${score}/100</div>
+        <div class="sc-lbl">Risk Score</div>
+        <div class="sc-sub">${riskBadge(rl)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val" style="font-size:18px">${trendArrow(bf.trend_direction||dash.trend)} ${bf.trend_direction||dash.trend||'—'}</div>
+        <div class="sc-lbl">Trend</div>
+        <div class="sc-sub">${bf.forecast_reliability||'—'} reliability</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val" style="font-size:18px">${anomCtx.is_anomalous||doc.is_anomalous?'⚠️ Yes':'✅ No'}</div>
+        <div class="sc-lbl">Anomalous</div>
+        <div class="sc-sub">${anomCtx.anomaly_score!==undefined?'Score: '+anomCtx.anomaly_score:doc.anomaly_score!==undefined?'Score: '+doc.anomaly_score:''}</div>
+      </div>
+      ${bf.prediction_confidence_score!==undefined?`
+      <div class="stat-card">
+        <div class="sc-val">${Math.round(bf.prediction_confidence_score)}</div>
+        <div class="sc-lbl">Confidence</div>
+        <div class="sc-sub">/100 score</div>
+      </div>`:''}
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="resTab('llm',this)">🤖 AI Explanation</div>
+      <div class="tab" onclick="resTab('forecast',this)">📊 Forecast &amp; Data</div>
+      <div class="tab" onclick="resTab('raw',this)">🔍 Raw Prediction</div>
+    </div>
+
+    <!-- LLM Tab -->
+    <div id="rtab-llm">
+      ${hasLLM ? buildLLMHTML(llm, recs) : `
+        <div class="card"><div class="card-body">
+          <div class="empty-state"><div class="es-icon">🤖</div>
+            <div class="es-title">No AI explanation yet</div>
+            <div class="es-text">Run pipeline with <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">--resource-explain-mode all</code> to generate per-resource AI explanations</div>
+          </div>
+          ${recs.length?`<div style="margin-top:16px"><b style="font-size:13px">Pipeline Recommendations</b>
+            <ol class="action-list" style="margin-top:10px">${recs.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span>${r}</li>`).join('')}</ol></div>`:''}
+        </div></div>`}
+    </div>
+
+    <!-- Forecast Tab -->
+    <div id="rtab-forecast" style="display:none">
+      ${buildForecastHTML(bf, fhorizons, domMetrics, breachCtx, catSigs, eq, anomCtx, unit)}
+    </div>
+
+    <!-- Raw Tab -->
+    <div id="rtab-raw" style="display:none">
+      ${buildRawHTML(doc, bf)}
+    </div>`;
+}
+
+function resTab(name, el) {
+  ['llm','forecast','raw'].forEach(t => {
+    const p = $('rtab-'+t); if(p) p.style.display = t===name?'':'none';
+  });
+  document.querySelectorAll('#view-resource-detail .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function buildLLMHTML(llm, recs) {
+  const SECS = [
+    {key:'resource_overview',  cls:'sec-overview',  icon:'🏗️', title:'Resource Overview',     wide:true},
+    {key:'current_state',      cls:'sec-state',      icon:'📊', title:'Current State'},
+    {key:'trend_analysis',     cls:'sec-trend',      icon:'📈', title:'Trend Analysis'},
+    {key:'forecast',           cls:'sec-forecast',   icon:'🔮', title:'Forecast'},
+    {key:'evidence',           cls:'sec-evidence',   icon:'🔢', title:'Supporting Evidence'},
+    {key:'operational_impact', cls:'sec-impact',     icon:'⚠️', title:'Operational Impact'},
+    {key:'confidence',         cls:'sec-confidence', icon:'📐', title:'Prediction Confidence'},
+  ];
+  const cards = SECS.map(s => {
+    const txt = llm[s.key];
+    if (!txt) return '';
+    return `<div class="llm-sec ${s.cls}${s.wide?' wide':''}">
+      <div class="llm-sec-head"><span class="llm-sec-icon">${s.icon}</span><span class="llm-sec-title">${s.title}</span></div>
+      <div class="llm-sec-body">${txt}</div>
+    </div>`;
+  }).join('');
+
+  const recsHtml = recs.length ? `
+    <div class="llm-sec sec-actions wide">
+      <div class="llm-sec-head"><span class="llm-sec-icon">✅</span><span class="llm-sec-title">Recommended Actions</span></div>
+      <div class="llm-sec-body">
+        <ol class="action-list">${recs.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span><span>${r}</span></li>`).join('')}</ol>
+      </div>
+    </div>` : '';
+
+  const meta = (llm.generated_at||llm.model) ? `
+    <div style="margin-top:10px;font-size:11px;color:#94a3b8;display:flex;gap:14px">
+      ${llm.generated_at?`<span>🕐 Generated: ${fmtDate(llm.generated_at)}</span>`:''}
+      ${llm.model?`<span>🤖 Model: ${llm.model}</span>`:''}
+    </div>` : '';
+
+  return `<div class="llm-grid">${cards}${recsHtml}</div>${meta}`;
+}
+
+function buildForecastHTML(bf, fhorizons, domMetrics, breachCtx, catSigs, eq, anomCtx, unit) {
+  // Build forecast horizon rows
+  let horizonRows = '';
+  if (fhorizons.length) {
+    horizonRows = fhorizons.map(h =>
+      `<tr>
+        <td>${h.horizon}</td>
+        <td><span class="fval">${fmt(h.predicted_value, h.unit||unit)}</span>
+          ${h.lower_bound!==undefined?`<div class="frange">[${fmt(h.lower_bound,h.unit||unit)} – ${fmt(h.upper_bound,h.unit||unit)}]</div>`:''}</td>
+        <td>${riskBadge(h.predicted_health||'UNKNOWN')}</td>
+        <td class="res-metric">${h.ci_width!==undefined?fmt(h.ci_width,h.unit||unit):'—'}</td>
+      </tr>`).join('');
+  } else {
+    // fallback to direct fields
+    const hs = [['1 hour','forecast_1h'],['6 hours','forecast_6h'],['24 hours','forecast_24h'],['7 days','forecast_7d'],['30 days','forecast_30d']];
+    horizonRows = hs.filter(([,k])=>bf[k]!==undefined).map(([lbl,k])=>
+      `<tr><td>${lbl}</td><td><span class="fval">${fmt(bf[k],unit)}</span></td><td>—</td><td>—</td></tr>`
+    ).join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8">No forecast data available</td></tr>';
+  }
+
+  const domHtml = domMetrics.length ? `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><span class="card-icon">🎯</span><div class="card-title">Dominant Metrics</div></div>
+      <div class="card-body">
+        <div class="metric-chips">${domMetrics.map(m=>`
+          <div class="m-chip ${m.severity||'UNKNOWN'}">
+            <span>${m.metric_name}</span>
+            ${m.current_value!==undefined?`<b>${fmt(m.current_value,m.unit||'')}</b>`:''}
+            ${m.classification?`· <b>${m.classification}</b>`:''}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  const breachKeys = Object.entries(breachCtx).filter(([,v])=>v!==null&&v!==undefined);
+  const breachHtml = breachKeys.length ? `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><span class="card-icon">⏰</span><div class="card-title">Breach Analysis</div></div>
+      <div class="card-body">
+        <div class="info-rows">${breachKeys.map(([k,v])=>`
+          <div class="info-row"><span class="ir-k">${k.replace(/_/g,' ')}</span><span class="ir-v">${v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  const sigKeys = Object.entries(catSigs).filter(([,v])=>v!==null&&v!==undefined);
+  const sigHtml = sigKeys.length ? `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><span class="card-icon">📡</span><div class="card-title">Operational Signals</div></div>
+      <div class="card-body">
+        <div class="info-rows">${sigKeys.map(([k,v])=>`
+          <div class="info-row"><span class="ir-k">${k.replace(/_/g,' ')}</span><span class="ir-v">${typeof v==='boolean'?(v?'Yes':'No'):v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  const anomKeys = Object.entries(anomCtx).filter(([,v])=>v!==null&&v!==undefined);
+  const anomHtml = anomKeys.length ? `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><span class="card-icon">${anomCtx.is_anomalous?'⚠️':'✅'}</span><div class="card-title">Anomaly Context</div></div>
+      <div class="card-body">
+        <div class="info-rows">${anomKeys.map(([k,v])=>`
+          <div class="info-row"><span class="ir-k">${k.replace(/_/g,' ')}</span><span class="ir-v">${typeof v==='boolean'?(v?'Yes':'No'):v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  const eqKeys = Object.entries(eq).filter(([,v])=>v!==null&&v!==undefined);
+  const eqHtml = eqKeys.length ? `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><span class="card-icon">📐</span><div class="card-title">Evaluation Quality</div></div>
+      <div class="card-body">
+        <div class="info-rows">${eqKeys.map(([k,v])=>`
+          <div class="info-row"><span class="ir-k">${k.replace(/_/g,' ')}</span><span class="ir-v" style="font-size:12px">${v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  return `
+    ${domHtml}
+    <div class="two-col">
+      <div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header"><span class="card-icon">🔮</span><div class="card-title">Forecast Horizons</div></div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table class="forecast-table">
+              <thead><tr><th>Horizon</th><th>Predicted Value</th><th>Health</th><th>CI Width</th></tr></thead>
+              <tbody>${horizonRows}</tbody>
+            </table>
+          </div>
+        </div>
+        ${breachHtml}
+      </div>
+      <div>
+        ${sigHtml}
+        ${anomHtml}
+        ${eqHtml}
+      </div>
+    </div>`;
+}
+
+function buildRawHTML(doc, bf) {
+  const alert = doc.alert || {};
+  const recs  = doc.recommendations || [];
+  const fails = doc.failure_predictions || [];
+
+  return `
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><span class="card-icon">📋</span><div class="card-title">Resource Identity</div></div>
+        <div class="card-body"><div class="info-rows">
+          <div class="info-row"><span class="ir-k">Name</span><span class="ir-v">${doc.resource_name||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Category</span><span class="ir-v">${doc.category||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Provider</span><span class="ir-v">${doc.provider||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Location</span><span class="ir-v">${doc.location||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Component</span><span class="ir-v">${doc.component||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Resource Type</span><span class="ir-v">${doc.canonical_resource_type||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Service Name</span><span class="ir-v">${doc.service_name||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Anomalous</span><span class="ir-v">${doc.is_anomalous?'⚠️ Yes':'✅ No'}</span></div>
+          <div class="info-row"><span class="ir-k">Anomaly Score</span><span class="ir-v">${doc.anomaly_score??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Data Quality</span><span class="ir-v">${doc.data_quality_note||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Completeness</span><span class="ir-v">${doc.data_completeness_score??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Alert Severity</span><span class="ir-v">${riskBadge(alert.severity||'INFO')}</span></div>
+          <div class="info-row"><span class="ir-k">Alert Trigger</span><span class="ir-v">${alert.trigger?'🔴 Active':'⚪ Not firing'}</span></div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-icon">📊</span><div class="card-title">Forecast Metadata</div></div>
+        <div class="card-body"><div class="info-rows">
+          <div class="info-row"><span class="ir-k">Metric</span><span class="ir-v" style="font-size:12px;word-break:break-all">${bf.metric_name||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Canonical Feature</span><span class="ir-v" style="font-size:12px">${bf.canonical_feature||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Method</span><span class="ir-v">${bf.forecast_method||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Reliability</span><span class="ir-v">${bf.forecast_reliability||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Pooling Tier</span><span class="ir-v">${bf.pooling_tier||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Confidence Score</span><span class="ir-v">${bf.prediction_confidence_score??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Backtest Quality</span><span class="ir-v">${bf.backtest_quality_score??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">MASE</span><span class="ir-v">${bf.backtest_mase??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Uncertainty %</span><span class="ir-v">${bf.forecast_uncertainty_pct??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Trend Direction</span><span class="ir-v">${bf.trend_direction||'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Trend Rate/Day</span><span class="ir-v">${bf.trend_rate_per_day??'—'}</span></div>
+          <div class="info-row"><span class="ir-k">Data Points</span><span class="ir-v">${bf.data_points_available??'—'}</span></div>
+        </div></div>
+      </div>
+    </div>
+    ${recs.length ? `
+    <div class="card">
+      <div class="card-header"><span class="card-icon">✅</span><div class="card-title">Pipeline Recommendations</div></div>
+      <div class="card-body"><ol class="action-list">${recs.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span>${r}</li>`).join('')}</ol></div>
+    </div>` : ''}
+    ${fails.length ? `
+    <div class="card">
+      <div class="card-header"><span class="card-icon">💀</span><div class="card-title">Failure Predictions</div></div>
+      <div class="card-body">${fails.map(fp=>`
+        <div class="alert-item crit" style="margin-bottom:8px;border-radius:8px">
+          <div><b>${fp.type||fp.failure_type||'Risk'}</b>${fp.eta?` — ETA: ${fp.eta}`:''}</div>
+          ${fp.description?`<div style="font-size:12px;margin-top:4px">${fp.description}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>` : ''}`;
+}
+
+// ── LLM Summaries View ─────────────────────────────────────────
+async function loadSummariesView() {
+  const view = $('view-summaries');
+  view.innerHTML = `<div class="loading"><div class="spinner"></div> Loading summaries…</div>`;
+  try {
+    const data = await apiFetch('/api/summaries?limit=100');
+    const summaries = data.summaries || [];
+
+    view.innerHTML = `
+      <div class="page-header">
+        <div class="ph-icon">🤖</div>
+        <div><div class="ph-title">LLM Project Summaries</div><div class="ph-meta">${summaries.length} AI-generated intelligence reports</div></div>
+      </div>
+      <div id="summ-list"></div>`;
+
+    const list = $('summ-list');
+    summaries.forEach(s => {
+      const rl = s.risk_level || 'UNKNOWN';
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.style.marginBottom = '14px';
+      const pkey = _regProj(s.project);
+      div.innerHTML = `
+        <div class="card-header" style="cursor:pointer" onclick="toggleSummCard('sc-${pkey}','sarr-${pkey}')">
+          <span class="card-icon">🗂️</span>
+          <div style="flex:1;min-width:0">
+            <div class="card-title" style="word-break:break-all">${escHtml(s.project)}</div>
+            <div class="card-subtitle">${escHtml((s.categories||[]).join(' · ')||'—')} · ${s.resource_count||0} resources · ${fmtDate(s.generated_at)}</div>
+          </div>
+          ${riskBadge(rl)}
+          <span id="sarr-${pkey}" style="margin-left:10px;color:#94a3b8;font-size:13px">▼</span>
+        </div>
+        <div id="sc-${pkey}" style="display:none">
+          <div class="card-body">
+            ${s.project_overview?`<div class="narrative" style="margin-bottom:12px">${s.project_overview}</div>`:''}
+            ${s.narrative?`<div class="narrative">${s.narrative}</div>`:''}
+            ${s.priority_alerts&&s.priority_alerts.length?`
+              <div style="margin-top:14px"><b style="font-size:13px;color:#dc2626">🚨 Priority Alerts</b>
+              <div class="alert-list" style="margin-top:8px">${s.priority_alerts.map(a=>`<div class="alert-item high">⚠️ ${a}</div>`).join('')}</div></div>`:''}
+            ${s.cross_category_correlations&&s.cross_category_correlations.length?`
+              <div style="margin-top:14px"><b style="font-size:13px;color:#475569">🔗 Correlations</b>
+              <div class="corr-list" style="margin-top:8px">${s.cross_category_correlations.map(c=>`<div class="corr-item">🔗 ${c}</div>`).join('')}</div></div>`:''}
+            ${s.recommended_action_order&&s.recommended_action_order.length?`
+              <div style="margin-top:14px"><b style="font-size:13px;color:#16a34a">✅ Recommended Actions</b>
+              <ol class="action-list" style="margin-top:8px">${s.recommended_action_order.map((r,i)=>`<li class="action-item"><span class="action-num">${i+1}</span>${r}</li>`).join('')}</ol></div>`:''}
+            ${s.resource_insights&&s.resource_insights.length?`
+              <div style="margin-top:14px"><b style="font-size:13px;color:#475569">💡 Resource Insights (${s.resource_insights.length})</b>
+              <div class="insight-grid" style="margin-top:8px">${s.resource_insights.slice(0,6).map(ins=>`
+                <div class="insight-card">
+                  <div class="insight-head"><span class="insight-icon">${catIcon(ins.category)}</span><span class="insight-name">${ins.resource_name||'—'}</span></div>
+                  <div class="insight-body">
+                    ${ins.current_health?`<div class="insight-text">${ins.current_health}</div>`:''}
+                    ${ins.operational_risks?`<div class="alert-item warn" style="margin-top:6px;border-radius:6px;font-size:12px">⚠️ ${ins.operational_risks}</div>`:''}
+                  </div>
+                </div>`).join('')}
+              </div></div>`:''}
+            <div style="margin-top:14px">
+              <button onclick="_summOpenProj('${pkey}');event.stopPropagation()"
+                style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">
+                Open Full Project →
+              </button>
+            </div>
+          </div>
+        </div>`;
+      list.appendChild(div);
+    });
+  } catch(e) {
+    view.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Error loading summaries</div><div class="es-text">${e.message}</div></div>`;
+  }
+}
+
+function toggleSummCard(bodyId, arrowId) {
+  const body = $(bodyId); if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  const arrow = $(arrowId); if(arrow) arrow.textContent = open ? '▼' : '▲';
+}
+
+// Also fix the "Open Full Project" button inside summaries — set via closure
+function _summOpenProj(pkey) { openProject(_PROJ[pkey]); }
+
+// ── Search ─────────────────────────────────────────────────────
+let _searchTimer = null;
+const searchInput = $('search-input');
+const searchDD    = $('search-dropdown');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { searchDD.classList.remove('open'); searchDD.innerHTML=''; return; }
+  _searchTimer = setTimeout(() => doSearch(q), 280);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { searchDD.classList.remove('open'); searchInput.blur(); }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-wrap')) searchDD.classList.remove('open');
+});
+
+async function doSearch(q) {
+  searchDD.innerHTML = `<div style="padding:14px;color:#64748b;font-size:13px;display:flex;align-items:center;gap:8px"><div class="spinner"></div> Searching…</div>`;
+  searchDD.classList.add('open');
+  try {
+    const data = await apiFetch('/api/search?q='+encodeURIComponent(q));
+    let html = '';
+
+    if (data.projects && data.projects.length) {
+      html += `<div class="sd-section"><div class="sd-header">Projects (${data.project_count||data.projects.length})</div>`;
+      data.projects.slice(0,5).forEach(p => {
+        const rl = p.risk_level||'UNKNOWN';
+        html += `<div class="sd-item" onclick="closeSearchOpen('project','${p.project.replace(/'/g,"\\'")}')">
+          <span class="sd-icon">🗂️</span>
+          <div><div class="sd-label">${p.project}</div><div class="sd-sub">${(p.categories||[]).join(' · ')} · ${p.resource_count||0} resources</div></div>
+          <span class="sd-badge badge badge-${rl}">${rl}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (data.resources && data.resources.length) {
+      html += `<div class="sd-section"><div class="sd-header">Resources (${data.resource_count||data.resources.length})</div>`;
+      data.resources.slice(0,8).forEach(r => {
+        const score = r.risk_score||0;
+        const rl = scoreToRisk(score);
+        const rkey = _regRes(r.resource_id||'');
+        html += `<div class="sd-item" onclick="closeSearchOpen('resource',_RES['${rkey}'])">
+          <span class="sd-icon">${catIcon(r.category)}</span>
+          <div><div class="sd-label">${escHtml(r.resource_name||r.resource_id)}</div><div class="sd-sub">${r.category||'—'} · ${r.provider||'—'} · ${r.location||'—'}</div></div>
+          <span class="sd-badge badge badge-${rl}">${rl}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (!html) html = `<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">No results for "<b>${q}</b>"</div>`;
+    searchDD.innerHTML = html;
+  } catch(e) {
+    searchDD.innerHTML = `<div style="padding:14px;color:#dc2626;font-size:13px">Search error: ${e.message}</div>`;
+  }
+}
+
+function closeSearchOpen(type, id) {
+  searchDD.classList.remove('open');
+  searchInput.value = '';
+  if (type === 'project') openProject(id);
+  else                    openResource(id);
+}
+
+// ── Boot ───────────────────────────────────────────────────────
+Promise.all([loadStats(), loadSidebarProjects()]);
+</script>
+</body>
+</html>
